@@ -1,0 +1,226 @@
+from machine import Pin, I2C
+import time
+
+# === PETER ===
+# === PCA9685 Setup ===
+class PCA9685:
+    def _init_(self, i2c, address=0x40):
+        self.i2c = i2c
+        self.address = address
+        self.reset()
+        self.set_pwm_freq(50)
+
+    def reset(self):
+        self.i2c.writeto_mem(self.address, 0x00, b'\x00')
+
+    def set_pwm_freq(self, freq_hz):
+        prescale = int(25000000.0 / (4096 * freq_hz) - 1)
+        old_mode = self.i2c.readfrom_mem(self.address, 0x00, 1)
+        self.i2c.writeto_mem(self.address, 0x00, bytes([old_mode[0] & 0x7F | 0x10]))
+        self.i2c.writeto_mem(self.address, 0xFE, bytes([prescale]))
+        self.i2c.writeto_mem(self.address, 0x00, old_mode)
+        time.sleep_ms(5)
+        self.i2c.writeto_mem(self.address, 0x00, bytes([old_mode[0] | 0xA1]))
+
+    def set_pwm(self, ch, on, off):
+        reg = 0x06 + 4 * ch
+        data = bytearray([on & 0xFF, on >> 8, off & 0xFF, off >> 8])
+        self.i2c.writeto_mem(self.address, reg, data)
+
+# === I2C Setup ===
+i2c = I2C(1, scl=Pin(3), sda=Pin(2), freq=100_000)
+pwm = PCA9685(i2c)
+
+# Moves a servo by sending a pulse to the given channel.
+# The input is a pulse width in microseconds (e.g. 1500),
+# which sets the servo speed using the PCA9685.
+def motor_speed(ch, pulse_in_microseconds):
+    pulse = int(pulse_in_microseconds * 4096 / 20000)
+    pwm.set_pwm(ch, 0, pulse)
+
+# === PCA9685 Channel Assignments ===
+# Left legs 
+left_leg1_lift = 0
+left_leg2_lift = 1
+left_leg1_swing = 4
+left_leg2_swing = 5
+
+# Right legs
+right_leg1_lift = 2
+right_leg2_lift = 3
+right_leg1_swing = 6
+right_leg2_swing = 7
+
+# === Actions ===
+def lift(ch): motor_speed(ch, 1700)
+def drop(ch): motor_speed(ch, 1500)
+def swing_forward(ch): motor_speed(ch, 1500)
+def swing_backwards(ch): motor_speed(ch, 1700)
+def stop(ch): motor_speed(ch, 1540)
+
+# Supporting Legs (8 & 9)
+motor_speed(8, 1450)
+time.sleep(0.2)
+motor_speed(8, 1540)
+
+motor_speed(9, 1700)
+time.sleep(0.15)
+motor_speed(9, 1540)
+
+def move_forward():
+    print(" Step 1: Left Leg 1 + Right Leg 2")
+    lift(left_leg1_lift)
+    lift(right_leg2_lift)
+    time.sleep(0.2)
+
+    swing_backwards(left_leg1_swing)
+    swing_backwards(right_leg2_swing)
+    time.sleep(0.25)
+
+    drop(left_leg1_lift)
+    drop(right_leg2_lift)
+    time.sleep(0.2)
+
+    stop(left_leg1_lift)
+    stop(left_leg1_swing)
+    stop(right_leg2_lift)
+    stop(right_leg2_swing)
+    time.sleep(0.3)
+
+    print(" Step 2: Right Leg 1 + Left Leg 2")
+    lift(right_leg1_lift)
+    lift(left_leg2_lift)
+    time.sleep(0.2)
+
+    swing_backwards(right_leg1_swing)
+    swing_backwards(left_leg2_swing)
+    time.sleep(0.25)
+
+    drop(right_leg1_lift)
+    drop(left_leg2_lift)
+    time.sleep(0.2)
+
+    stop(right_leg1_lift)
+    stop(right_leg1_swing)
+    stop(left_leg2_lift)
+    stop(left_leg2_swing)
+    time.sleep(0.3)
+    
+    print(" Step 1: Left Leg 1 + Right Leg 2")
+    lift(left_leg1_lift)
+    lift(right_leg2_lift)
+    time.sleep(0.2)
+
+    swing_forward(left_leg1_swing)
+    swing_forward(right_leg2_swing)
+    time.sleep(0.50)
+
+    drop(left_leg1_lift)
+    drop(right_leg2_lift)
+    time.sleep(0.2)
+
+    stop(left_leg1_lift)
+    stop(left_leg1_swing)
+    stop(right_leg2_lift)
+    stop(right_leg2_swing)
+    time.sleep(0.3)
+
+    print(" Step 2: Right Leg 1 + Left Leg 2")
+    lift(right_leg1_lift)
+    lift(left_leg2_lift)
+    time.sleep(0.2)
+
+    swing_forward(right_leg1_swing)
+    swing_forward(left_leg2_swing)
+    time.sleep(0.50)
+
+    drop(right_leg1_lift)
+    drop(left_leg2_lift)
+    time.sleep(0.2)
+
+    stop(right_leg1_lift)
+    stop(right_leg1_swing)
+    stop(left_leg2_lift)
+    stop(left_leg2_swing)
+    time.sleep(0.3)
+
+def move_left():
+    print(" Turning left")
+    lift(left_leg1_lift)
+    lift(right_leg2_lift)
+    time.sleep(0.2)
+
+    swing_backwards(left_leg1_swing)
+    swing_backwards(right_leg2_swing)
+    time.sleep(0.25)
+
+    drop(left_leg1_lift)
+    drop(right_leg2_lift)
+    time.sleep(0.2)
+
+    stop(left_leg1_lift)
+    stop(left_leg1_swing)
+    stop(right_leg2_lift)
+    stop(right_leg2_swing)
+    time.sleep(0.3)
+
+    print(" Step 2: Right Leg 1 + Left Leg 2")
+    lift(right_leg1_lift)
+    lift(left_leg2_lift)
+    time.sleep(0.2)
+
+    swing_backwards(right_leg1_swing)
+    swing_backwards(left_leg2_swing)
+    time.sleep(0.25)
+
+    drop(right_leg1_lift)
+    drop(left_leg2_lift)
+    time.sleep(0.2)
+
+    stop(right_leg1_lift)
+    stop(right_leg1_swing)
+    stop(left_leg2_lift)
+    stop(left_leg2_swing)
+    time.sleep(0.3)
+    
+def move_right():
+    print(" Turning left")
+    lift(left_leg1_lift)
+    lift(right_leg2_lift)
+    time.sleep(0.2)
+
+    swing_forward(left_leg1_swing)
+    swing_forward(right_leg2_swing)
+    time.sleep(0.25)
+
+    drop(left_leg1_lift)
+    drop(right_leg2_lift)
+    time.sleep(0.2)
+
+    stop(left_leg1_lift)
+    stop(left_leg1_swing)
+    stop(right_leg2_lift)
+    stop(right_leg2_swing)
+    time.sleep(0.3)
+
+    print(" Step 2: Right Leg 1 + Left Leg 2")
+    lift(right_leg1_lift)
+    lift(left_leg2_lift)
+    time.sleep(0.2)
+
+    swing_forward(right_leg1_swing)
+    swing_forward(left_leg2_swing)
+    time.sleep(0.25)
+
+    drop(right_leg1_lift)
+    drop(left_leg2_lift)
+    time.sleep(0.2)
+
+    stop(right_leg1_lift)
+    stop(right_leg1_swing)
+    stop(left_leg2_lift)
+    stop(left_leg2_swing)
+    time.sleep(0.3)
+
+while True:
+    move_forward()
